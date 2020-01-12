@@ -20,41 +20,44 @@
         class="login-form"
       >
         <el-form-item prop="email" class="item">
-          <label for="">邮箱</label>
+          <label for="email">邮箱</label>
           <el-input
             type="text"
             v-model="loginForm.email"
             auto-complete="off"
+            id="email"
           ></el-input>
         </el-form-item>
         <el-form-item prop="pass" class="item">
-          <label for="">密码</label>
+          <label for="pass">密码</label>
           <el-input
             type="password"
             v-model="loginForm.pass"
             auto-complete="off"
             min-length="6"
             max-length="20"
+            id="pass"
           ></el-input>
         </el-form-item>
         <el-form-item prop="pass2" class="item" v-show="model === 'register'">
-          <label for="">再次输入密码</label>
+          <label for="pass2">再次输入密码</label>
           <el-input
             type="password"
             v-model="loginForm.pass2"
             auto-complete="off"
             min-length="6"
             max-length="20"
+            id="pass2"
           ></el-input>
         </el-form-item>
         <el-form-item prop="code" class="item">
-          <label for="">验证码</label>
+          <label for="code">验证码</label>
           <el-row :gutter="20">
             <el-col :span="15"
-              ><el-input v-model.number="loginForm.code"></el-input
+              ><el-input v-model.number="loginForm.code" id="code"></el-input
             ></el-col>
             <el-col :span="9"
-              ><el-button type="success" class="block">获取验证码</el-button>
+              ><el-button type="success" class="block" @click="getCode" :disabled="codeButton.status">{{codeButton.text}}</el-button>
             </el-col>
           </el-row>
         </el-form-item>
@@ -63,7 +66,8 @@
             type="danger"
             @click="submitForm('loginForm')"
             class="login-btn"
-            >提交</el-button
+            :disabled="loginButtonStatus"
+            >{{model === 'login'?'登录':'注册'}}</el-button
           >
         </el-form-item>
       </el-form>
@@ -74,6 +78,8 @@
 <script>
 import { validateEmail, validatePass } from "@/utils/validate";
 import { reactive, ref, onMounted, onUpdated } from "@vue/composition-api";
+import {GetCode} from "@/api/login"
+import { setInterval, clearInterval } from 'timers';
 export default {
   //import引入的组件需要注入到对象中才能使用
   name: "login",
@@ -118,8 +124,17 @@ export default {
       { txt: "登录", isActive: true, type: "login" },
       { txt: "注册", isActive: false, type: "register" }
     ]);
-
+    // 当前模式
     const model = ref("login");
+    // 登录按钮状态
+    const loginButtonStatus = ref(true);
+    // 验证码按钮
+    const codeButton = reactive({
+      status:false,
+      text:'获取验证码'
+    })
+    // 验证码倒计时
+    const timer = ref(null);
     // 表单验证数据
     const loginForm = reactive({
       email: "",
@@ -141,6 +156,8 @@ export default {
       });
       data.isActive = true;
       model.value = data.type;
+      // 重置表单
+      context.refs.loginForm.resetFields() // 2.0 this.$refs['loginForm'].resetFields()
     };
     const submitForm = formName => {
       context.refs[formName].validate(valid => {
@@ -152,18 +169,62 @@ export default {
         }
       });
     };
-    onMounted(() => {});
+    // 获取倒计时间
+    const countDown = (number)=>{
+      let time = number
+      timer.value = setInterval(()=>{
+        time--;
+        
+        if(time===0){
+          codeButton.text = "重新获取"
+          codeButton.status = false
+          clearInterval(timer.value)
+        }else{
+          codeButton.text = `还剩${time--}秒可重新获取!`
+        }
+      },1000)
+    };
+    // 获取验证码
+    const getCode = ()=>{
+      if(!loginForm.email) return context.root.$message.error('邮箱不能为空噢')
+      if(validateEmail(loginForm.email)) return context.root.$message.error('邮箱格式有误')
+      
+      let requestData = {
+        username: loginForm.email,
+        model:model.value
+      }
+      codeButton.status = true;
+      codeButton.text = "发送中";
+
+      GetCode(requestData).then(res=>{
+        let {message} = res.data
+        context.root.$message.success(message)
+        // 启用登录/注册按钮
+        loginButtonStatus.value = false
+        // countDown (60)
+        console.log(res);
+      }).catch(err=>{
+        console.log(err);
+      })
+    };
+    onMounted(() => {
+    });
     onUpdated(() => {});
     return {
       menuTab,
       model,
+      loginButtonStatus,
+      codeButton,
+      timer,
       loginForm,
       loginRules,
       switchTab,
-      submitForm
+      submitForm,
+      getCode,
+      countDown
     };
   },
-  onMounted() {},
+  
   components: {},
 
   //计算属性 类似于data概念
