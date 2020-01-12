@@ -3,9 +3,9 @@ module.exports = {
   // publicPath:process.env.NODE_ENV === 'production' ? '/vue_workspac/aihuhuproject/' : '/',
 
   //基本路径
-  publicPath: "./", //默认的'/'是绝对路径，如果不确定在根路径，改成相对路径'./'
+  publicPath: process.env.NODE_ENV === 'production' ? '' : '/', //默认的'/'是绝对路径，如果不确定在根路径，改成相对路径'./'
   // 输出文件目录
-  outputDir: "dist",
+  outputDir: process.env.NODE_ENV === 'production' ? 'dist' : 'devdist',
   assetsDir: "static",
   indexPath: "index.html",
   // eslint-loader 是否在保存的时候检查
@@ -66,16 +66,17 @@ module.exports = {
     hot: true, //hot配置是否启用模块的热替换功能，devServer的默认行为是在发现源代码被变更后，通过自动刷新整个页面来做到事实预览，开启hot后，将在不刷新整个页面的情况下通过新模块替换老模块来做到实时预览。
     https: false,
     hotOnly: false, // hot 和 hotOnly 的区别是在某些模块不支持热更新的情况下，前者会自动刷新页面，后者不会刷新页面，而是在控制台输出热更新失败
-    // proxy: {
-    //   "/": {
-    //     target: "192.168.1.131:8080", //目标接口域名
-    //     secure: false, //false为http访问，true为https访问
-    //     changeOrigin: true, //是否跨域
-    //     pathRewrite: {
-    //       "^/": "/" //重写接口
-    //     }
-    //   }
-    // }, // 设置代理
+    proxy: {
+      "/devApi": {
+        target: "http://www.web-jshtml.cn/productapi", //目标接口域名
+        secure: false, //false为http访问，true为https访问
+        changeOrigin: true, //是否跨域
+        pathRewrite: {
+          // "^/": "/" //重写接口
+          "^/devApi": "" //重写接口
+        }
+      }
+    }, // 设置代理
     before: app => {
       console.log(app);
     }

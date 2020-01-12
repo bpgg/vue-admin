@@ -1,12 +1,13 @@
-import service from "@utils/request";
+import service from "@/utils/request";
 /**
  * 获取验证码
  */
-export function getCode() {
-  service.request({
+export function GetCode(data={}) {
+  return service.request({
     method: "post",
-    url: "/getCode",
-    data: {}
+    url: "/getSms/",
+    // 在es6中，属性名data和传入的参数值名data一样，则可以直接用data
+    data
   });
 }
 /**
