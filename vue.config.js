@@ -3,15 +3,26 @@ module.exports = {
   // publicPath:process.env.NODE_ENV === 'production' ? '/vue_workspac/aihuhuproject/' : '/',
 
   //基本路径
-  publicPath: process.env.NODE_ENV === 'production' ? '' : '/', //默认的'/'是绝对路径，如果不确定在根路径，改成相对路径'./'
+  publicPath: process.env.NODE_ENV === "production" ? "" : "/", //默认的'/'是绝对路径，如果不确定在根路径，改成相对路径'./'
   // 输出文件目录
-  outputDir: process.env.NODE_ENV === 'production' ? 'dist' : 'devdist',
+  outputDir: process.env.NODE_ENV === "production" ? "dist" : "devdist",
   assetsDir: "static",
   indexPath: "index.html",
   // eslint-loader 是否在保存的时候检查
   lintOnSave: false,
   // 生产环境是否生成 sourceMap 文件
   productionSourceMap: false,
+  chainWebpack: config => {
+    const svgRule = config.module.rule("svg");
+    svgRule.uses.clear();
+    svgRule
+      .use("svg-sprite-loader")
+      .loader("svg-sprite-loader")
+      .options({
+        symbolId: "icon-[name]",
+        include: ["./src/icons"]
+      });
+  },
   configureWebpack: config => {
     if (process.env.NODE_ENV === "production") {
       // 为生产环境修改配置...
@@ -20,11 +31,13 @@ module.exports = {
       // 为开发环境修改配置...
       config.mode = "development";
     }
+
     Object.assign(config, {
       // 开发生产共同配置
       resolve: {
         extensions: [".js", ".json", ".vue"],
         alias: {
+          vue: "vue/dist/vue.js",
           "@": path.resolve(__dirname, "./src"),
           "@c": path.resolve(__dirname, "./src/components"),
           "@v": path.resolve(__dirname, "./src/views")
@@ -68,7 +81,8 @@ module.exports = {
     hotOnly: false, // hot 和 hotOnly 的区别是在某些模块不支持热更新的情况下，前者会自动刷新页面，后者不会刷新页面，而是在控制台输出热更新失败
     proxy: {
       "/devApi": {
-        target: "http://www.web-jshtml.cn/productapi", //目标接口域名
+        // target: "http://www.web-jshtml.cn/productapi", //目标接口域名
+        target: "http://www.web-jshtml.cn/productapi/token", //API服务器的地址  http://www.web-jshtml.cn/api
         secure: false, //false为http访问，true为https访问
         changeOrigin: true, //是否跨域
         pathRewrite: {

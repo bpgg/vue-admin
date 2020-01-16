@@ -54,10 +54,16 @@
           <label for="code">验证码</label>
           <el-row :gutter="20">
             <el-col :span="15"
-              ><el-input v-model.number="loginForm.code" id="code"></el-input
+              ><el-input v-model="loginForm.code" id="code"></el-input
             ></el-col>
             <el-col :span="9"
-              ><el-button type="success" class="block" @click="getCode" :disabled="codeButton.status">{{codeButton.text}}</el-button>
+              ><el-button
+                type="success"
+                class="block"
+                @click="getCode"
+                :disabled="codeButton.status"
+                >{{ codeButton.text }}</el-button
+              >
             </el-col>
           </el-row>
         </el-form-item>
@@ -67,7 +73,7 @@
             @click="submitForm('loginForm')"
             class="login-btn"
             :disabled="loginButtonStatus"
-            >{{model === 'login'?'登录':'注册'}}</el-button
+            >{{ model === "login" ? "登录" : "注册" }}</el-button
           >
         </el-form-item>
       </el-form>
@@ -76,10 +82,12 @@
 </template>
 
 <script>
+import sha1 from "js-sha1";
 import { validateEmail, validatePass } from "@/utils/validate";
-import { reactive, ref, onMounted, onUpdated } from "@vue/composition-api";
-import {GetCode} from "@/api/login"
-import { setInterval, clearInterval } from 'timers';
+import { Message } from "element-ui";
+import { reactive, ref } from "@vue/composition-api";
+// eslint-disable-next-line no-unused-vars
+import { GetCode, Login, Register } from "@/api/login";
 export default {
   //import引入的组件需要注入到对象中才能使用
   name: "login",
@@ -120,6 +128,9 @@ export default {
       }
       callback();
     };
+    /*********************************************************************************************************************
+     * 声明数据
+     */
     const menuTab = reactive([
       { txt: "登录", isActive: true, type: "login" },
       { txt: "注册", isActive: false, type: "register" }
@@ -130,9 +141,9 @@ export default {
     const loginButtonStatus = ref(true);
     // 验证码按钮
     const codeButton = reactive({
-      status:false,
-      text:'获取验证码'
-    })
+      status: false,
+      text: "获取验证码"
+    });
     // 验证码倒计时
     const timer = ref(null);
     // 表单验证数据
@@ -150,6 +161,11 @@ export default {
       code: [{ validator: validatecode, trigger: "blur" }]
     });
 
+    /**
+     * 1、不建议在一个方法里面做多件不同的事件（尽可能只做自己本身的事，不要做其他人的事情）
+     * 2、尽量把相同的事情封装一个方法里面，通过调用函数进行执行
+     */
+
     const switchTab = data => {
       menuTab.forEach(e => {
         e.isActive = false;
@@ -157,59 +173,136 @@ export default {
       data.isActive = true;
       model.value = data.type;
       // 重置表单
-      context.refs.loginForm.resetFields() // 2.0 this.$refs['loginForm'].resetFields()
+      resetFrom();
+      // 清除计时器
+      clearCountDown();
     };
+    // 重置表单
+    const resetFrom = () => {
+      context.refs.loginForm.resetFields();
+    };
+    // 更新按钮状态
+    const updateButtonStatus = params => {
+      codeButton.status = params.status;
+      codeButton.text = params.text;
+    };
+    // 获取倒计时间
+    const countDown = number => {
+      let time = number;
+      // 存在则删除
+      if (timer.value) {
+        clearInterval(timer.value);
+      }
+      timer.value = setInterval(() => {
+        time--;
+        if (time === 0) {
+          clearInterval(timer.value);
+          updateButtonStatus({
+            status: false,
+            text: "再次获取"
+          });
+        } else {
+          codeButton.text = `倒计时${time}`;
+        }
+      }, 1000);
+    };
+    /***
+     * 清除倒计时
+     */
+    const clearCountDown = () => {
+      updateButtonStatus({
+        status: false,
+        text: "获取验证码"
+      });
+      // 清除倒计时
+      clearInterval(timer.value);
+    };
+    // 获取验证码
+    const getCode = () => {
+      if (!loginForm.email)
+        return context.root.$message.error("邮箱不能为空噢");
+      if (validateEmail(loginForm.email))
+        return context.root.$message.error("邮箱格式有误");
+
+      let requestData = {
+        username: loginForm.email,
+        model: model.value
+      };
+      updateButtonStatus({
+        status: true,
+        text: "发送中"
+      });
+      // codeButton.status = true;
+      // codeButton.text = "发送中";
+      GetCode(requestData)
+        .then(res => {
+          let { message } = res.data;
+          context.root.$message.success(message);
+          // 启用登录/注册按钮
+          loginButtonStatus.value = false;
+          // 开启倒计时
+          countDown(15);
+          console.log(res);
+        })
+        .catch(err => {
+          console.log(err);
+        });
+    };
+    // 提交数据
     const submitForm = formName => {
       context.refs[formName].validate(valid => {
         if (valid) {
-          alert("submit!");
+          model.value === "login" ? login() : register();
         } else {
           console.log("error submit!!");
           return false;
         }
       });
     };
-    // 获取倒计时间
-    const countDown = (number)=>{
-      let time = number
-      timer.value = setInterval(()=>{
-        time--;
-        
-        if(time===0){
-          codeButton.text = "重新获取"
-          codeButton.status = false
-          clearInterval(timer.value)
-        }else{
-          codeButton.text = `还剩${time--}秒可重新获取!`
-        }
-      },1000)
-    };
-    // 获取验证码
-    const getCode = ()=>{
-      if(!loginForm.email) return context.root.$message.error('邮箱不能为空噢')
-      if(validateEmail(loginForm.email)) return context.root.$message.error('邮箱格式有误')
-      
+    const login = () => {
       let requestData = {
         username: loginForm.email,
-        model:model.value
-      }
-      codeButton.status = true;
-      codeButton.text = "发送中";
-
-      GetCode(requestData).then(res=>{
-        let {message} = res.data
-        context.root.$message.success(message)
-        // 启用登录/注册按钮
-        loginButtonStatus.value = false
-        // countDown (60)
-        console.log(res);
-      }).catch(err=>{
-        console.log(err);
-      })
+        password: sha1(loginForm.pass),
+        code: loginForm.code
+      };
+      Login(requestData)
+        .then(res => {
+          let { message } = res.data;
+          Message.success(message);
+          clearCountDown();
+          context.root.$router.push({ name: "Console" });
+          console.log(res);
+        })
+        .catch(err => {
+          console.log(err);
+        });
     };
-    onMounted(() => {
-    });
-    onUpdated(() => {});
+    const register = () => {
+      let requestData = {
+        username: loginForm.email,
+        password: sha1(loginForm.pass),
+        code: loginForm.code,
+        module: "register"
+      };
+      // 注册接口
+      Register(requestData)
+        .then(response => {
+          let data = response.data;
+          context.root.$message({
+            message: data.message,
+            type: "success"
+          });
+          // 模拟注册成功
+          switchTab(menuTab[0]);
+          clearCountDown();
+        })
+        // eslint-disable-next-line no-unused-vars
+        .catch(error => {
+          // 失败时执行的代码
+        });
+    };
+    // onMounted(() => {});
+    // onUpdated(() => {});
     return {
       menuTab,
       model,
@@ -219,12 +312,15 @@ export default {
       loginForm,
       loginRules,
       switchTab,
+      updateButtonStatus,
       submitForm,
+      login,
+      register,
       getCode,
       countDown
     };
   },
-  
+
   components: {},
 
   //计算属性 类似于data概念
