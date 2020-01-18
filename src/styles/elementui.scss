@@ -1,7 +1,7 @@
 .el-submenu .el-menu-item {
   font-size: 14px;
   padding-left: 50px !important;
-  &.is-active { background-color: rgba(245, 108, 108, 0.2) !important; }
+  &.is-active { background-color: rgba(245, 108, 108, 0.2) !important; } // &表示同级
 }
 // 修改一级菜单样式
 li.el-submenu {
@@ -24,6 +24,8 @@ li.el-submenu {
       background-color: $mainCcolor !important;
   }
 }
+
+
 
 /* table 样式*/
 div.el-table {

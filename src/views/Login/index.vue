@@ -265,17 +265,30 @@ export default {
         password: sha1(loginForm.pass),
         code: loginForm.code
       };
-      Login(requestData)
+      context.root.$store
+        .dispatch("app/login", requestData)
         .then(res => {
+          console.log("登陆成功");
           let { message } = res.data;
           Message.success(message);
-          clearCountDown();
-          context.root.$router.push({ name: "Console" });
           console.log(res);
+          context.root.$router.push({ name: "Console" });
         })
         .catch(err => {
           console.log(err);
         });
+      //   Login(requestData)
+      //     .then(res => {
+      //       let { message } = res.data;
+      //       Message.success(message);
+      //       clearCountDown();
+      //       context.root.$router.push({ name: "Console" });
+      //       console.log(res);
+      //     })
+      //     .catch(err => {
+      //       console.log(err);
+      //     });
+      // };
     };
     const register = () => {
       let requestData = {

@@ -1,7 +1,7 @@
 <template>
   <div id="main-wrap">
     <div class="main-content">
-      <div class="contet">
+      <div class="content">
         <router-view />
       </div>
     </div>
@@ -11,7 +11,7 @@
 <script>
 export default {
   name: "layoutMain",
-  setup(props, context) {
+  setup() {
     //定义基础数据和方法
     //生命周期
     return {};
@@ -21,15 +21,7 @@ export default {
 <style lang="scss" scoped>
 @import "../../../styles/config.scss";
 #main-wrap {
-  position: fixed;
-  left: $navMenu;
-  top: $layoutHeader;
-  right: 0;
-  bottom: 0;
-  background-color: white;
-  box-sizing: border-box;
-  border: 30px solid #f7f7f7;
-  border-bottom: 0;
+  height: 100vh;
 }
 .open {
   .main-content {
@@ -46,7 +38,16 @@ export default {
   height: 100%;
   padding-top: $layoutHeader + 30;
   padding-right: 30px;
+  padding-left: $navMenu + 30;
+
   @include webkit(box-sizing, border-box);
   @include webkit(transition, all 0.3s ease 0s);
+}
+.content {
+  background: white;
+  width: 100%;
+  height: 100%;
+  @include webkit(box-sizing, border-box);
+  padding: 30px 30px 0 30px;
 }
 </style>
