@@ -6,9 +6,11 @@ import store from "./store";
 import ElementUI from "element-ui";
 import "element-ui/lib/theme-chalk/index.css";
 import "./router/premit";
-
+// 自定义全局方法
+import global from "@/utils/global.js";
 import "./icons";
 
+Vue.use(global);
 Vue.use(ElementUI);
 Vue.use(VueCompositionApi);
 Vue.config.productionTip = false;
