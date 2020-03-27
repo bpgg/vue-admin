@@ -4,12 +4,16 @@
       <el-row :gutter="14">
         <el-col :span="4">
           <div class="label-wrap category">
-            <label for="">类型：</label>
+            <label for="">分类：</label>
             <div class="wrap-content">
-              <el-select v-model="category" placeholder="请选择" style="100%">
+              <el-select
+                v-model="categorySelected"
+                placeholder="请选择"
+                style="100%"
+              >
                 <el-option
-                  v-for="item in options.category"
-                  :key="item.value"
+                  v-for="item in category.item"
+                  :key="item.id"
                   :label="item.category_name"
                   :value="item.id"
                   :disabled="item.disabled"
@@ -73,19 +77,26 @@
       </el-row>
     </el-form>
     <!-- 表格 -->
-    <el-table :data="tableData" border style="width: 100%" class="table-wrap">
+    <el-table
+      :data="data.InfoTable"
+      border
+      style="width: 100%"
+      class="table-wrap"
+      @selection-change="handleSelectionChange"
+    >
       <el-table-column type="selection" width="45"></el-table-column>
-      <el-table-column prop="title" label="标题" width="830"> </el-table-column>
-      <el-table-column prop="category" label="分类" width="130">
+      <el-table-column prop="title" label="标题" width="300"> </el-table-column>
+      <el-table-column prop="categoryId" label="分类" width="110">
       </el-table-column>
-      <el-table-column prop="date" label="日期" width="237"> </el-table-column>
+      <el-table-column prop="createDate" label="日期" width="237">
+      </el-table-column>
       <el-table-column prop="user" label="管理员"> </el-table-column>
       <el-table-column label="操作" width="225">
         <template slot-scope="scope">
           <el-button type="danger" size="mini" @click="deleteItem(scope.row.id)"
             >删除</el-button
           >
-          <el-button type="success" size="mini" @click="editInfo(scope.row.id)"
+          <el-button type="success" size="mini" @click="editInfo(scope.row)"
             >编辑</el-button
           >
         </template>
@@ -94,7 +105,7 @@
     <!-- 分页 -->
     <el-row>
       <el-col :span="12">
-        <el-button>批量删除</el-button>
+        <el-button @click="deleteAll">批量删除</el-button>
       </el-col>
       <el-col :span="12"
         ><el-pagination
@@ -102,9 +113,9 @@
           layout="prev, pager, next,sizes,total,jumper"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
-          :total="1000"
-          :page-sizes="[10, 20, 30, 50]"
-          :page-size="10"
+          :total="data.total"
+          :page-sizes="[4, 10, 20, 50]"
+          :page-size="requestForm.pageSize"
           class="fl-right"
         >
         </el-pagination
@@ -112,82 +123,60 @@
     </el-row>
 
     <!-- 新增弹窗 -->
-    <DialogInfo :flag.sync="dialogInfoVisible" :category="options.category" />
-    <!-- <DialogInfo :flag="dialogInfoVisible" @close="closeDialog" /> -->
+    <DialogInfo
+      :flag.sync="data.dialogInfoVisible"
+      @addRowData="addRowData"
+      :category="category.item"
+    />
+    <DialogEditInfo
+      :flag.sync="data.dialogEditInfoVisible"
+      :category="category.item"
+      :rowData="data.currentRowData"
+      @updateRowData="updateRowData"
+    />
   </div>
 </template>
 
 <script>
-import { reactive, ref } from "@vue/composition-api";
+import { reactive, ref, watch, onMounted } from "@vue/composition-api";
 import DialogInfo from "./dialog/info";
+import DialogEditInfo from "./dialog/infoEdit";
 import { global } from "@/utils/global_V3.0";
+import { common } from "@/api/common";
+// 引入接口
+import { GetList, DeleteInfo } from "@/api/news";
 export default {
   name: "InfoIndex",
   components: {
-    DialogInfo
+    DialogInfo,
+    DialogEditInfo
   },
   setup(props, { root }) {
     /**
      * 数据
      */
-    const { str: aaa, confirm } = global();
-    const dialogInfoVisible = ref(false);
+    const { confirm } = global();
+    const { getCategoryInfo, category } = common();
+    // ref
     const date = ref("");
-    const category = ref("国际信息");
+    const categorySelected = ref("");
     const keyword = ref("ID");
-    const form = reactive({
-      name: "",
-      region: "",
-      date1: "",
-      date2: "",
-      delivery: false,
-      type: [],
-      resource: "",
-      desc: ""
+    // 初始化页码信息
+    const requestForm = reactive({
+      categoryId: 0,
+      startTiem: "",
+      endTime: "",
+      title: "",
+      id: 0,
+      pageNumber: 1,
+      pageSize: 4
     });
-    const tableData = reactive([
-      {
-        title: "测试标题",
-        category: "国际信息",
-        date: "2020-01-23",
-        user: "管理员"
-      },
-      {
-        title: "测试标题",
-        category: "国际信息",
-        date: "2020-01-23",
-        user: "管理员"
-      },
-      {
-        title: "测试标题",
-        category: "国际信息",
-        date: "2020-01-23",
-        user: "管理员"
-      },
-      {
-        title: "测试标题",
-        category: "国际信息",
-        date: "2020-01-23",
-        user: "管理员"
-      }
-    ]);
-
-    const options = reactive({
-      category: [
-        {
-          id: "选项1",
-          category_name: "国际信息"
-        },
-        {
-          id: "选项2",
-          category_name: "国内信息"
-          // disabled: true
-        },
-        {
-          id: "选项3",
-          category_name: "行内信息"
-        }
-      ]
+    const data = reactive({
+      InfoTable: [],
+      total: 0,
+      dialogInfoVisible: false,
+      dialogEditInfoVisible: false,
+      deleteIds: []
     });
     const options2 = reactive([
       {
@@ -199,38 +188,72 @@ export default {
         label: "标题"
       }
     ]);
-
-    /**
-     * 方法
-     */
-    // const closeDialog = flag => {
-    //   console.log(111);
-    //   dialogInfoVisible.value = flag;
-    // };
-    const deleteItem = () => {
-      // 直接注册vue原型对象上
-      // root.confirm({
-      //   content: "内容",
-      //   tip: "提示",
-      //   id: "001",
-      //   fn: () => {
-      //     alert("删除成功");
-      //   }
-      // });
-      // Vue3.0
-      confirm({
-        content: "内容2",
-        tip: "提示",
-        id: "001",
-        fn: () => {
-          // alert("删除成功");
-          console.log("删成");
+    // 获取当前选择的id
+    const handleSelectionChange = rows => {
+      rows.forEach(e => {
+        if (data.deleteIds.indexOf(e.id) === -1) {
+          data.deleteIds.push(e.id);
         }
       });
     };
+
+    // 编辑行数据
+    const editInfo = row => {
+      // 赋值
+      data.currentRowData = row;
+
+      data.dialogEditInfoVisible = true;
+    };
+    // 子组件触发组件更新rowdata
+    const updateRowData = rowData => {
+      getList();
+      // console.log("儿子叫我做事");
+      // console.log(rowData.id);
+      // let index = data.InfoTable.findIndex(item => item.id == rowData.id);
+      // console.log(index);
+      // console.log(data.InfoTable[index]);
+      // 这样无法改变值。
+      // data.InfoTable[index] = rowData;
+      // 这样导致数组有问题。
+      // data.InfoTable.splice(index, 1, rowData);
+    };
+    const addRowData = rowData => {
+      getList();
+    };
+    const deleteAll = () => {
+      confirm({
+        content: "删除全部",
+        tip: "提示",
+        id: data.deleteIds,
+        fn: confirmDelete
+      });
+    };
+    const deleteItem = id => {
+      confirm({
+        content: "您确定要删除该数据吗？",
+        tip: "提示",
+        id: [id],
+        fn: confirmDelete
+      });
+    };
+    const confirmDelete = ids => {
+      DeleteInfo({ id: ids })
+        .then(res => {
+          root.$message({
+            message: res.data.message,
+            type: "success"
+          });
+          // 清空删除的id数组
+          data.deleteIds.splice(0, data.deleteIds.length);
+          // 重新渲染列表
+          getList();
+        })
+        .catch(err => {});
+    };
+
     const addTabelData = () => {
-      dialogInfoVisible.value = true;
-      console.log("new");
+      data.dialogInfoVisible = true;
+      // 新增数据
     };
     const handleClose = done => {
       root
@@ -243,26 +266,45 @@ export default {
         .catch(_ => {});
     };
     const handleSizeChange = val => {
-      console.log(`每页 ${val} 条`);
+      requestForm.pageSize = val;
+      getList();
     };
     const handleCurrentChange = val => {
-      console.log(`当前页: ${val}`);
+      requestForm.pageNumber = val;
+      getList();
     };
-
+    // 获取信息列表
+    const getList = () => {
+      GetList(requestForm)
+        .then(res => {
+          data.InfoTable = res.data.data.data;
+          data.total = res.data.data.total;
+        })
+        .catch(err => {});
+    };
     //生命周期
+    onMounted(() => {
+      getCategoryInfo();
+      getList();
+    });
+
     return {
       // ref
-      dialogInfoVisible,
       date,
-      category,
+      categorySelected,
       keyword,
       // reactive
-      form,
-      tableData,
-      options,
+      category,
+      data,
       options2,
+      requestForm,
       // method
+      handleSelectionChange,
+      updateRowData,
+      addRowData,
+      editInfo,
       deleteItem,
+      deleteAll,
       addTabelData,
       handleClose,
       handleSizeChange,

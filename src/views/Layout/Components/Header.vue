@@ -5,7 +5,11 @@
     </div>
     <div class="fl-right ">
       <div class="fl-left user-info">
-        <img src="../../../assets/images/face.jpg" alt="" />
+        <img
+          style="width:40px;height:40px"
+          src="../../../assets/images/appAvatar.png"
+          alt=""
+        />
         {{ username }}
       </div>
       <div class="fl-left header-icon" @click="exit">

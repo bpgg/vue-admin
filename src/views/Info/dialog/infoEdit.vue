@@ -1,20 +1,20 @@
 <template>
   <el-dialog
-    title="新增内容"
+    title="修改内容"
     :visible.sync="data.dialog_info_flag"
     width="580px"
     @close="close"
     @opened="openDialog"
     center
   >
-    <el-form ref="addInfoForm">
+    <el-form ref="editInfoForm">
       <el-form-item
         label="类别："
         placeholder="请选择活动区域"
         :label-width="data.formLabelWidth"
       >
         <!-- el-select 需要绑定值。 -->
-        <el-select v-model="data.form.category">
+        <el-select v-model="data.form.categoryId">
           <el-option
             v-for="item in data.categoryOption"
             :key="item.id"
@@ -27,7 +27,7 @@
       <el-form-item label="标题：" :label-width="data.formLabelWidth">
         <el-input placehoder="请输入标题" v-model="data.form.title"></el-input>
       </el-form-item>
-      <el-form-item label="概况：" :label-width="data.formLabelWidth">
+      <el-form-item label="内容：" :label-width="data.formLabelWidth">
         <el-input
           type="textarea"
           placehoder="请输入内容"
@@ -46,7 +46,7 @@
 
 <script>
 import { watch, reactive } from "@vue/composition-api";
-import { AddInfo } from "@/api/news";
+import { EditInfo } from "@/api/news";
 export default {
   name: "dialogInfo",
   // 从父组件获取的值，赋值给子组件一个另外的值，达到单向数据流的目的。
@@ -58,6 +58,10 @@ export default {
     category: {
       type: Array,
       default: () => []
+    },
+    rowData: {
+      type: Object,
+      default: () => {}
     }
   },
   setup(props, { emit, refs, root }) {
@@ -67,9 +71,11 @@ export default {
       dialog_info_flag: false, // 弹窗标记
       formLabelWidth: "70px",
       form: {
-        category: "",
+        categoryId: "",
         title: "",
-        content: ""
+        content: "",
+        imgUrl: "",
+        id: ""
       },
       // 分类下拉
       categoryOption: [],
@@ -79,33 +85,37 @@ export default {
     /** methods */
     const close = () => {
       data.dialog_info_flag = false;
-      emit("update:flag", false);
       resetForm();
+      emit("update:flag", false);
     };
     const openDialog = () => {
-      console.log(props.category);
       data.categoryOption = props.category;
+      let { categoryId, title, content, imgUrl, id } = props.rowData;
+      data.form.categoryId = categoryId;
+      data.form.title = title;
+      data.form.content = content;
+      data.form.id = id;
+      data.form.imgUrl = imgUrl;
     };
     const resetForm = () => {
-      refs.addInfoForm.resetFields();
+      refs.editInfoForm.resetFields();
     };
     // 提交新增info
     const submit = () => {
       data.submitLoading = true;
-      AddInfo(data.form)
+      EditInfo(data.form)
         .then(res => {
+          console.log(res);
           root.$message({
-            message: res.data.message + "添加信息成功",
+            message: res.data.message + "修改信息成功",
             type: "success"
           });
+          // 触发父组件更新数据。 把新的data.form传递回去。
+          emit("updateRowData", data.form);
           // 关闭弹窗
           data.dialog_info_flag = false;
-          console.log(res);
-          emit("update:flag", false);
-          // 本来以为返回的值可以传递给父组件。
-          emit("addRowData", {});
-          // 按钮状态还原
           data.submitLoading = false;
+          emit("update:flag", false);
           resetForm();
         })
         .catch(err => {
@@ -114,7 +124,6 @@ export default {
           emit("update:flag", false);
           data.submitLoading = false;
           resetForm();
-          console.log(err);
         });
     };
     // watch
